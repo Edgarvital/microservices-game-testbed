@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Domain\OnlineGame.AuthService.Core.Domain.csproj" />
+  </ItemGroup>
+
 </Project>
