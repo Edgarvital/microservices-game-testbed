@@ -1,0 +1,6 @@
+@OnlineGame.MatchmakingService.Api_HostAddress = http://localhost:5068
+
+GET {{OnlineGame.MatchmakingService.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
