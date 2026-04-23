@@ -1,0 +1,51 @@
+services:
+  auth-db:
+    image: postgres:16-alpine
+    container_name: onlinegame-auth-db
+    environment:
+      POSTGRES_DB: onlinegame_auth
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./docker-data/postgres-auth:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d onlinegame_auth"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: onlinegame-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - ./docker-data/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  auth-service:
+    build:
+      context: ../services/auth-service
+      dockerfile: Dockerfile
+    container_name: onlinegame-auth-service
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      AUTH_DB_CONNECTION: Host=auth-db;Port=5432;Database=onlinegame_auth;Username=postgres;Password=postgres
+      JWT_SECRET: CHANGE_ME_BASELINE_LOCAL_SECRET_32B
+      Secrets__Provider: Local
+      Jwt__AccessTokenTtlMinutes: 120
+    ports:
+      - "8080:8080"

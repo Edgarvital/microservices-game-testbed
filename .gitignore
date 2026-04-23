@@ -52,7 +52,22 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 
-# Frontend (if added later)
-node_modules/
-dist/
-coverage/
+# Golang (Battle Service)
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# Godot (Frontend do Jogo)
+.godot/
+export_presets.cfg
+*.translation
+
+# Docker / Banco de Dados Local (Evita subir os dados do Postgres ou Vault sem querer)
+docker-data/
+postgres-data/
+vault-data/

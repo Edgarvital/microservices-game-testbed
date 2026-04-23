@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-service-config
+  namespace: onlinegame
+data:
+  ASPNETCORE_ENVIRONMENT: Development
+  ASPNETCORE_URLS: http://+:8080
+  AUTH_DB_CONNECTION: Host=auth-db;Port=5432;Database=onlinegame_auth;Username=postgres;Password=postgres
+  Secrets__Provider: Local
+  Jwt__AccessTokenTtlMinutes: "120"
