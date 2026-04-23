@@ -11,10 +11,11 @@ services:
     volumes:
       - ./docker-data/postgres-auth:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d onlinegame_auth"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
       interval: 5s
       timeout: 3s
-      retries: 10
+      retries: 20
+      start_period: 30s
 
   redis:
     image: redis:7-alpine

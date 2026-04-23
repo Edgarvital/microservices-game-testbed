@@ -27,11 +27,11 @@ spec:
               value: postgres
           readinessProbe:
             exec:
-              command: ["/bin/sh", "-c", "pg_isready -U postgres -d onlinegame_auth"]
+              command: ["/bin/sh", "-c", "pg_isready -U postgres -d postgres"]
             initialDelaySeconds: 5
             periodSeconds: 5
           livenessProbe:
             exec:
-              command: ["/bin/sh", "-c", "pg_isready -U postgres -d onlinegame_auth"]
+              command: ["/bin/sh", "-c", "pg_isready -U postgres -d postgres"]
             initialDelaySeconds: 15
             periodSeconds: 10
