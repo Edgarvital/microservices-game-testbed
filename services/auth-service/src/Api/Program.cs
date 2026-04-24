@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using OnlineGame.AuthService.Api.Contracts.Common;
 using OnlineGame.AuthService.Infrastructure;
+using OnlineGame.AuthService.Api.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +32,8 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
