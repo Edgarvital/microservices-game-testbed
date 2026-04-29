@@ -84,3 +84,39 @@ services:
       Jwt__Secret: CHANGE_ME_BASELINE_LOCAL_SECRET_32B
     ports:
       - "8081:8080"
+
+  matchmaking-db:
+    image: postgres:16-alpine
+    container_name: onlinegame-matchmaking-db
+    environment:
+      POSTGRES_DB: onlinegame_matchmaking
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - ./docker-data/postgres-matchmaking:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+
+  matchmaking-service:
+    build:
+      context: ../services/matchmaking-service
+      dockerfile: Dockerfile
+    container_name: onlinegame-matchmaking-service
+    depends_on:
+      matchmaking-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__MatchmakingDb: Host=matchmaking-db;Port=5432;Database=onlinegame_matchmaking;Username=postgres;Password=postgres
+      ConnectionStrings__Redis: redis:6379
+    ports:
+      - "8082:8080"

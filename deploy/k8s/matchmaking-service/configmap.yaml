@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: matchmaking-service-config
+  namespace: onlinegame
+data:
+  ASPNETCORE_ENVIRONMENT: Development
+  ASPNETCORE_URLS: http://+:8080
+  ConnectionStrings__MatchmakingDb: Host=matchmaking-db;Port=5432;Database=onlinegame_matchmaking;Username=postgres;Password=postgres
+  ConnectionStrings__Redis: redis:6379
