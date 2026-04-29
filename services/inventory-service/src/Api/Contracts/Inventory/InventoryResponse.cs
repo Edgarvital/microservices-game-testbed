@@ -6,6 +6,7 @@ public sealed class InventoryResponse
     public int BaseLevel { get; init; }
     public int BaseHp { get; init; }
     public int BaseAttack { get; init; }
+    public int Power { get; init; }
     public DateTime LastUpdate { get; init; }
     public IReadOnlyList<PlayerCardResponse> Cards { get; init; } = Array.Empty<PlayerCardResponse>();
     public IReadOnlyList<PlayerDeckResponse> Decks { get; init; } = Array.Empty<PlayerDeckResponse>();

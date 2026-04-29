@@ -27,6 +27,7 @@ public class InventoryDbContext : DbContext
         modelBuilder.Entity<PlayerInventory>().Property(pi => pi.BaseLevel).IsRequired();
         modelBuilder.Entity<PlayerInventory>().Property(pi => pi.BaseHp).IsRequired();
         modelBuilder.Entity<PlayerInventory>().Property(pi => pi.BaseAttack).IsRequired();
+        modelBuilder.Entity<PlayerInventory>().Property(pi => pi.Power).IsRequired();
         modelBuilder.Entity<PlayerInventory>().Property(pi => pi.LastUpdate).IsRequired();
         modelBuilder.Entity<PlayerInventory>()
             .HasMany(pi => pi.Cards)

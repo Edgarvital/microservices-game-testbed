@@ -242,6 +242,35 @@ public sealed class InventoryController : ControllerBase
         });
     }
 
+    [HttpPut("{playerId:guid}/power")]
+    [ProducesResponseType<InventoryResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<InventoryResponse>> UpdatePower(
+        Guid playerId,
+        [FromBody] UpdatePlayerPowerRequest request,
+        CancellationToken cancellationToken)
+    {
+        var accessError = EnsurePlayerAccess(playerId);
+        if (accessError is not null)
+        {
+            return accessError;
+        }
+
+        var inventory = await _playerInventoryRepository.GetByPlayerIdAsync(playerId, cancellationToken);
+        if (inventory is null)
+        {
+            return NotFound(Error("INVENTORY_NOT_FOUND", "Inventory was not found for the player."));
+        }
+
+        inventory.SetPower(request.Power);
+        await _playerInventoryRepository.UpdateAsync(inventory, cancellationToken);
+
+        var updated = await _playerInventoryRepository.GetByPlayerIdAsync(playerId, cancellationToken);
+        return Ok(ToResponse(updated!));
+    }
+
     private async Task<PlayerInventory> EnsureInventoryAsync(Guid playerId, CancellationToken cancellationToken)
     {
         var inventory = await _playerInventoryRepository.GetByPlayerIdAsync(playerId, cancellationToken);
@@ -264,6 +293,7 @@ public sealed class InventoryController : ControllerBase
             BaseLevel = inventory.BaseLevel,
             BaseHp = inventory.BaseHp,
             BaseAttack = inventory.BaseAttack,
+            Power = inventory.Power,
             LastUpdate = inventory.LastUpdate,
             Cards = inventory.Cards
                 .OrderBy(c => c.CardId)
