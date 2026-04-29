@@ -4,5 +4,5 @@ namespace OnlineGame.AuthService.Core.Application.Security;
 
 public interface IJwtTokenGenerator
 {
-    string GenerateToken(Player player, string secretKey);
+    string GenerateToken(User player, string secretKey);
 }

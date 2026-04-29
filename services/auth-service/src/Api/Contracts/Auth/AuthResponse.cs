@@ -6,7 +6,6 @@ public sealed class AuthResponse
     public DateTime ExpiresAtUtc { get; init; }
     public Guid PlayerId { get; init; }
     public bool IsGuest { get; init; }
-    public int BaseLevel { get; init; }
     public string? Email { get; init; }
     public string? DeviceId { get; init; }
 }

@@ -12,16 +12,16 @@ namespace OnlineGame.AuthService.Api.Controllers;
 [Route("api/auth")]
 public sealed class AuthController : ControllerBase
 {
-    private readonly IPlayerRepository _playerRepository;
+    private readonly IUserRepository _userRepository;
     private readonly ISecretProvider _secretProvider;
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
 
     public AuthController(
-        IPlayerRepository playerRepository,
+        IUserRepository userRepository,
         ISecretProvider secretProvider,
         IJwtTokenGenerator jwtTokenGenerator)
     {
-        _playerRepository = playerRepository;
+        _userRepository = userRepository;
         _secretProvider = secretProvider;
         _jwtTokenGenerator = jwtTokenGenerator;
     }
@@ -33,7 +33,7 @@ public sealed class AuthController : ControllerBase
     [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<AuthResponse>> LoginGuest([FromBody] LoginGuestRequest request, CancellationToken cancellationToken)
     {
-        var player = await _playerRepository.GetByDeviceIdAsync(request.DeviceId, cancellationToken);
+        var player = await _userRepository.GetByDeviceIdAsync(request.DeviceId, cancellationToken);
         if (player is null)
         {
             return NotFound(Error("GUEST_NOT_FOUND", "Guest player not found."));
@@ -45,7 +45,7 @@ public sealed class AuthController : ControllerBase
         }
 
         player.RecordLogin();
-        await _playerRepository.UpdateAsync(player, cancellationToken);
+        await _userRepository.UpdateAsync(player, cancellationToken);
 
         var authResponse = await BuildAuthResponseAsync(player);
         return Ok(authResponse);
@@ -57,15 +57,15 @@ public sealed class AuthController : ControllerBase
     [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<AuthResponse>> RegisterGuest([FromBody] RegisterGuestRequest request, CancellationToken cancellationToken)
     {
-        var existingPlayer = await _playerRepository.GetByDeviceIdAsync(request.DeviceId, cancellationToken);
+        var existingPlayer = await _userRepository.GetByDeviceIdAsync(request.DeviceId, cancellationToken);
         if (existingPlayer is not null)
         {
             return Conflict(Error("DEVICE_ALREADY_REGISTERED", "DeviceId is already registered."));
         }
 
-        var player = Player.CreateGuest(request.DeviceId);
+        var player = OnlineGame.AuthService.Core.Domain.User.CreateGuest(request.DeviceId);
         player.RecordLogin();
-        await _playerRepository.AddAsync(player, cancellationToken);
+        await _userRepository.AddAsync(player, cancellationToken);
 
         var authResponse = await BuildAuthResponseAsync(player);
         return StatusCode(StatusCodes.Status201Created, authResponse);
@@ -78,13 +78,13 @@ public sealed class AuthController : ControllerBase
     [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<AuthResponse>> LinkGuestAccount([FromBody] LinkGuestAccountRequest request, CancellationToken cancellationToken)
     {
-        var player = await _playerRepository.GetByDeviceIdAsync(request.DeviceId, cancellationToken);
+        var player = await _userRepository.GetByDeviceIdAsync(request.DeviceId, cancellationToken);
         if (player is null)
         {
             return NotFound(Error("GUEST_NOT_FOUND", "Guest player not found for provided deviceId."));
         }
 
-        var existingRegistered = await _playerRepository.GetByEmailAsync(request.Email, cancellationToken);
+        var existingRegistered = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
         if (existingRegistered is not null && existingRegistered.Id != player.Id)
         {
             return Conflict(Error("EMAIL_ALREADY_LINKED", "Email is already linked to another account."));
@@ -92,7 +92,7 @@ public sealed class AuthController : ControllerBase
 
         player.LinkAccount(request.Email, request.PasswordHash);
         player.RecordLogin();
-        await _playerRepository.UpdateAsync(player, cancellationToken);
+        await _userRepository.UpdateAsync(player, cancellationToken);
 
         var authResponse = await BuildAuthResponseAsync(player);
         return Ok(authResponse);
@@ -105,7 +105,7 @@ public sealed class AuthController : ControllerBase
     [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<AuthResponse>> LoginRegistered([FromBody] LoginRegisteredRequest request, CancellationToken cancellationToken)
     {
-        var player = await _playerRepository.GetByEmailAsync(request.Email, cancellationToken);
+        var player = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
         if (player is null)
         {
             return NotFound(Error("REGISTERED_NOT_FOUND", "Registered player not found."));
@@ -117,7 +117,7 @@ public sealed class AuthController : ControllerBase
         }
 
         player.RecordLogin();
-        await _playerRepository.UpdateAsync(player, cancellationToken);
+        await _userRepository.UpdateAsync(player, cancellationToken);
 
         var authResponse = await BuildAuthResponseAsync(player);
         return Ok(authResponse);
@@ -129,21 +129,21 @@ public sealed class AuthController : ControllerBase
     [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<AuthResponse>> RegisterRegistered([FromBody] RegisterRegisteredRequest request, CancellationToken cancellationToken)
     {
-        var existingPlayer = await _playerRepository.GetByEmailAsync(request.Email, cancellationToken);
+        var existingPlayer = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
         if (existingPlayer is not null)
         {
             return Conflict(Error("EMAIL_ALREADY_REGISTERED", "Email is already registered."));
         }
 
-        var player = Player.CreateRegistered(request.Email, request.PasswordHash);
+        var player = OnlineGame.AuthService.Core.Domain.User.CreateRegistered(request.Email, request.PasswordHash);
         player.RecordLogin();
-        await _playerRepository.AddAsync(player, cancellationToken);
+        await _userRepository.AddAsync(player, cancellationToken);
 
         var authResponse = await BuildAuthResponseAsync(player);
         return StatusCode(StatusCodes.Status201Created, authResponse);
     }
 
-    private async Task<AuthResponse> BuildAuthResponseAsync(Player player)
+    private async Task<AuthResponse> BuildAuthResponseAsync(User player)
     {
         var secretKey = await _secretProvider.GetJwtSecretAsync();
         var accessToken = _jwtTokenGenerator.GenerateToken(player, secretKey);
@@ -156,7 +156,6 @@ public sealed class AuthController : ControllerBase
             ExpiresAtUtc = jwt.ValidTo,
             PlayerId = player.Id,
             IsGuest = player.IsGuest,
-            BaseLevel = player.BaseLevel,
             Email = player.Email,
             DeviceId = player.DeviceId
         };

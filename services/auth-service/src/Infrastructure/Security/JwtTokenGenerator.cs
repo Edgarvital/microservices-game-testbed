@@ -18,7 +18,7 @@ public sealed class JwtTokenGenerator : IJwtTokenGenerator
         _accessTokenTtlMinutes = int.TryParse(ttlValue, out var parsed) && parsed > 0 ? parsed : 120;
     }
 
-    public string GenerateToken(Player player, string secretKey)
+    public string GenerateToken(User player, string secretKey)
     {
         if (player is null)
         {
@@ -40,8 +40,7 @@ public sealed class JwtTokenGenerator : IJwtTokenGenerator
         {
             new(JwtRegisteredClaimNames.Sub, player.Id.ToString()),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new("is_guest", player.IsGuest.ToString().ToLowerInvariant()),
-            new("base_level", player.BaseLevel.ToString())
+            new("is_guest", player.IsGuest.ToString().ToLowerInvariant())
         };
 
         if (!string.IsNullOrWhiteSpace(player.Email))

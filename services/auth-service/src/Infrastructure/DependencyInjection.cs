@@ -31,7 +31,7 @@ public static class DependencyInjection
             services.AddSingleton<ISecretProvider>(new LocalSecretProvider(configuration));
         }
 
-        services.AddScoped<IPlayerRepository, PlayerRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 
         return services;

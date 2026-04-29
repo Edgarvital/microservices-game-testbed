@@ -1,19 +1,20 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using OnlineGame.AuthService.Core.Application.Players;
 using OnlineGame.AuthService.Core.Domain;
 
 namespace OnlineGame.AuthService.Infrastructure.Persistence;
 
-public sealed class PlayerRepository : IPlayerRepository
+public sealed class UserRepository : IUserRepository
 {
     private readonly AuthDbContext _dbContext;
 
-    public PlayerRepository(AuthDbContext dbContext)
+    public UserRepository(AuthDbContext dbContext)
     {
         _dbContext = dbContext;
     }
 
-    public async Task<Player?> GetByDeviceIdAsync(string deviceId, CancellationToken cancellationToken = default)
+    public async Task<User?> GetByDeviceIdAsync(string deviceId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(deviceId))
         {
@@ -22,11 +23,11 @@ public sealed class PlayerRepository : IPlayerRepository
 
         var normalizedDeviceId = deviceId.Trim();
 
-        return await _dbContext.Players
+        return await _dbContext.Users
             .FirstOrDefaultAsync(x => x.DeviceId == normalizedDeviceId, cancellationToken);
     }
 
-    public async Task<Player?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
+    public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(email))
         {
@@ -35,25 +36,25 @@ public sealed class PlayerRepository : IPlayerRepository
 
         var normalizedEmail = email.Trim();
 
-        return await _dbContext.Players
+        return await _dbContext.Users
             .FirstOrDefaultAsync(x => x.Email == normalizedEmail, cancellationToken);
     }
 
-    public async Task AddAsync(Player player, CancellationToken cancellationToken = default)
+    public async Task AddAsync(User user, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(user);
 
-        await _dbContext.Players.AddAsync(player, cancellationToken);
+        await _dbContext.Users.AddAsync(user, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task UpdateAsync(Player player, CancellationToken cancellationToken = default)
+    public async Task UpdateAsync(User user, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(user);
 
-        if (_dbContext.Entry(player).State == EntityState.Detached)
+        if (_dbContext.Entry(user).State == EntityState.Detached)
         {
-            _dbContext.Players.Update(player);
+            _dbContext.Users.Update(user);
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);

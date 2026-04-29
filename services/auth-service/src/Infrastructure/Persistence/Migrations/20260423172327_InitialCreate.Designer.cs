@@ -25,16 +25,12 @@ namespace OnlineGame.AuthService.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("OnlineGame.AuthService.Core.Domain.Player", b =>
+            modelBuilder.Entity("OnlineGame.AuthService.Core.Domain.User", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
-
-                    b.Property<int>("BaseLevel")
-                        .HasColumnType("integer")
-                        .HasColumnName("base_level");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")

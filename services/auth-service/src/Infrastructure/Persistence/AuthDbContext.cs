@@ -11,17 +11,17 @@ public sealed class AuthDbContext : DbContext
     {
     }
 
-    public DbSet<Player> Players => Set<Player>();
+    public DbSet<User> Users => Set<User>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.ApplyConfiguration(new PlayerConfiguration());
+        modelBuilder.ApplyConfiguration(new UserConfiguration());
     }
 }
 
-internal sealed class PlayerConfiguration : IEntityTypeConfiguration<Player>
+internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
 {
-    public void Configure(EntityTypeBuilder<Player> builder)
+    public void Configure(EntityTypeBuilder<User> builder)
     {
         builder.ToTable("players");
 
@@ -30,7 +30,6 @@ internal sealed class PlayerConfiguration : IEntityTypeConfiguration<Player>
         builder.Property(x => x.DeviceId).HasColumnName("device_id");
         builder.Property(x => x.Email).HasColumnName("email");
         builder.Property(x => x.PasswordHash).HasColumnName("password_hash");
-        builder.Property(x => x.BaseLevel).HasColumnName("base_level").IsRequired();
         builder.Property(x => x.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(x => x.LastLoginAt).HasColumnName("last_login_at").IsRequired();
 
