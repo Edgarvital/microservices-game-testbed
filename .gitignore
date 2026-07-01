@@ -75,3 +75,13 @@ vault-data/
 # Python (scripts de benchmark)
 __pycache__/
 *.pyc
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.dvi
+*.bbl
+*.blg
+*.out
+*.toc
+*.synctex.gz
