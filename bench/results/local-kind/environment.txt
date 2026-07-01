@@ -1,0 +1,15 @@
+run_stamp_utc: 20260701-042644
+namespace: onlinegame
+reps: 8
+scenarios: C
+ghz: image=ghcr.io/bojand/ghz:latest n=10000 c=50 conn=10 skipFirst=1000
+k6: image=grafana/k6:latest vus=30 duration=20s
+player_id: 11111111-1111-1111-1111-111111111111
+kubectl_context: kind-bench
+--- istio ---
+client version: 1.30.2
+control plane version: 1.30.2
+data plane version: 1.30.2 (8 proxies)
+--- nodes ---
+NAME                  STATUS   ROLES           AGE   VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE                       KERNEL-VERSION                              CONTAINER-RUNTIME
+bench-control-plane   Ready    control-plane   61m   v1.36.1   172.19.0.2    <none>        Debian GNU/Linux 13 (trixie)   6.18.33.1-microsoft-standard-WSL2 (amd64)   containerd://2.3.1

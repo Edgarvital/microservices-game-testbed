@@ -45,11 +45,16 @@ K6_DURATION=${K6_DURATION:-60s}
 RUN_K6=${RUN_K6:-1}                             # 1 = tambem roda o REST
 RUN_GHZ=${RUN_GHZ:-1}
 
+# Exporta as variaveis usadas pelos templates de Job (envsubst le do ambiente).
+export NAMESPACE PLAYER_ID GHZ_IMAGE GHZ_N GHZ_C GHZ_CONN GHZ_SKIP K6_IMAGE K6_VUS K6_DURATION
+
 # ----- caminhos -----
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 STAMP=$(date -u +%Y%m%d-%H%M%S)
-OUT="$SCRIPT_DIR/results/$STAMP"
+# OUT pode ser fixado por env para rodar cenarios em invocacoes separadas (mesmo run).
+OUT=${OUT:-"$SCRIPT_DIR/results/$STAMP"}
+AGGREGATE=${AGGREGATE:-1}                        # 0 = pula a agregacao (util em runs parciais)
 mkdir -p "$OUT"
 
 log() { echo "[$(date -u +%H:%M:%S)] $*"; }
@@ -131,7 +136,9 @@ run_job() {
   local tpl="$SCRIPT_DIR/k8s/${kind}-job.yaml.tpl"
   local job="bench-${kind}"
 
-  kubectl delete job "$job" -n "$NAMESPACE" --ignore-not-found >/dev/null 2>&1 || true
+  # Deleta o job anterior e ESPERA sumir (senao ha race entre delete/apply/wait
+  # e a coleta de logs pode vir vazia).
+  kubectl delete job "$job" -n "$NAMESPACE" --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1 || true
   envsubst < "$tpl" | kubectl apply -f - >/dev/null
 
   # Espera completar OU falhar
@@ -140,9 +147,14 @@ run_job() {
     log "AVISO: job $job nao completou no tempo; coletando logs mesmo assim."
   fi
 
-  # Coleta o stdout do container de carga (evita logs do sidecar com -c)
-  kubectl logs "job/$job" -n "$NAMESPACE" -c "$kind" > "$outfile" 2>/dev/null || \
-    kubectl logs "job/$job" -n "$NAMESPACE" > "$outfile" 2>/dev/null || true
+  # Coleta o stdout do container de carga (evita logs do sidecar com -c), com retry:
+  # o pod pode demorar alguns segundos para disponibilizar os logs apos completar.
+  local attempt
+  for attempt in 1 2 3 4; do
+    kubectl logs "job/$job" -n "$NAMESPACE" -c "$kind" > "$outfile" 2>/dev/null || true
+    [ -s "$outfile" ] && break
+    sleep 2
+  done
   kubectl delete job "$job" -n "$NAMESPACE" --ignore-not-found >/dev/null 2>&1 || true
 }
 
@@ -179,11 +191,20 @@ for scenario in $SCENARIOS; do
   done
 done
 
+if [ "$AGGREGATE" != "1" ]; then
+  log "Cenario(s) [$SCENARIOS] coletado(s) em $OUT (agregacao pulada)."
+  exit 0
+fi
+
 log "Coleta concluida. Agregando resultados..."
-if command -v python3 >/dev/null 2>&1; then
-  python3 "$SCRIPT_DIR/aggregate.py" "$OUT" || log "AVISO: agregacao falhou; dados brutos em $OUT"
+PY=""
+if python3 -c "" >/dev/null 2>&1; then PY=python3
+elif python -c "" >/dev/null 2>&1; then PY=python
+fi
+if [ -n "$PY" ]; then
+  "$PY" "$SCRIPT_DIR/aggregate.py" "$OUT" || log "AVISO: agregacao falhou; dados brutos em $OUT"
 else
-  log "python3 indisponivel; pule para a agregacao manual (dados brutos em $OUT)."
+  log "python indisponivel; rode manualmente: python bench/aggregate.py $OUT"
 fi
 
 log "Pronto. Resultados em: $OUT"

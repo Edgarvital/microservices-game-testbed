@@ -10,6 +10,11 @@ import { check } from 'k6';
 //   PLAYER_ID  GUID usado no corpo do join
 //   K6_VUS / K6_DURATION sao passados via flags do k6 no Job.
 
+// Inclui p99 no resumo (o k6 so calcula os percentis listados aqui).
+export const options = {
+  summaryTrendStats: ['avg', 'med', 'p(90)', 'p(95)', 'p(99)', 'max'],
+};
+
 const BASE_URL = __ENV.BASE_URL || 'http://matchmaking-service:8080';
 const PLAYER_ID = __ENV.PLAYER_ID || '11111111-1111-1111-1111-111111111111';
 
