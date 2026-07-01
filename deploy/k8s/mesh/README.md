@@ -101,6 +101,8 @@ O caminho east-west mais relevante hoje é o **gRPC battle-service → inventory
 
 Registre em cada cenário: latência (p50/p95/p99), throughput (req/s) e uso de CPU/memória dos pods (`kubectl top pods -n onlinegame`), já que o Envoy consome recursos. Como o gRPC é HTTP/2 (conexão multiplexada e persistente) e o REST é HTTP/1.1, meça-os separadamente: o overhead relativo do mTLS costuma diferir entre os dois.
 
+> **Harness automatizado:** todo esse fluxo (alternar cenários, warm-up, N repetições, coleta e agregação) está implementado em [`bench/`](../../../bench/README.md) — `bash bench/run.sh`.
+
 > Dica de rigor: fixe réplicas, recursos (requests/limits) e a carga entre os cenários; varie **apenas** a flag. Rode várias repetições e reporte média + desvio.
 
 ## Escopo e limites
