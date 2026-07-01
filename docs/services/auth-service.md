@@ -123,4 +123,3 @@ DI (`Infrastructure/DependencyInjection.cs`): `DbContext` Scoped, `ISecretProvid
 ## Build (Docker)
 
 Multi-stage: `sdk:8.0` (restore + publish Release) -> `aspnet:8.0`. Expõe 8080, `ASPNETCORE_ENVIRONMENT=Development`. Entry: `OnlineGame.AuthService.Api.dll`.
-</content>

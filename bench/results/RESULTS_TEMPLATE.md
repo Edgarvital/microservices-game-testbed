@@ -55,4 +55,3 @@ _Métrica secundária (fluxo end-to-end: k6→matchmaking→inventory + Redis/DB
 
 - Distribuição das latências (bimodal?), erros, saturação de CPU, etc.
 - Limitações do experimento (ver `bench/README.md`).
-</content>

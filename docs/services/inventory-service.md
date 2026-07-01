@@ -113,4 +113,3 @@ DI: `DbContext` (Npgsql) + repositórios Scoped (`ICardRepository`, `IPlayerInve
 ## Build (Docker)
 
 Multi-stage `sdk:8.0` -> `aspnet:8.0`, porta 8080, entry `OnlineGame.InventoryService.Api.dll`. **O contexto de build é a raiz do repositório** (não a pasta do serviço), porque o Dockerfile copia também `proto/` para gerar o stub gRPC.
-</content>

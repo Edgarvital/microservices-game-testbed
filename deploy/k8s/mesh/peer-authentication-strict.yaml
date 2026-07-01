@@ -9,4 +9,3 @@ metadata:
 spec:
   mtls:
     mode: STRICT
-</content>

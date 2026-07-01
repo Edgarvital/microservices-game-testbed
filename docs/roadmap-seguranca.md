@@ -68,4 +68,3 @@ A RSL aponta duas abordagens complementares para avaliar efetividade, aplicávei
 Esse par (segurança medida x overhead medido) é o resultado central que o testbed pretende produzir para responder à RQ1.
 
 O **harness reproduzível** para a medição de overhead (cenários A/B/C, ghz para gRPC e k6 para REST, coleta de latência/throughput/recursos e agregação) está em [`bench/`](../bench/README.md). Ele executa carga real no cluster; não gera dados sintéticos.
-</content>

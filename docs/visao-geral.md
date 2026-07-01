@@ -196,4 +196,3 @@ microservices-game-testbed/
 │   └── battle-service/           # Go
 └── docs/                         # esta documentação
 ```
-</content>

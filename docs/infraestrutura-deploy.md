@@ -110,4 +110,3 @@ Ao rodar via `dotnet run` (perfis em `launchSettings.json`):
 | matchmaking-service | 5068 | 7259 |
 
 O battle-service (Go) roda com `go run ./cmd/battle-service`, escutando em `:8080` (`HTTP_ADDR`). Note que seu `INVENTORY_GRPC_ADDR` default no código é `localhost:5017` (a porta HTTP dev do inventory), útil para rodar tudo fora de container.
-</content>

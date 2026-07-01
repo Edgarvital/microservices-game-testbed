@@ -7,4 +7,3 @@ metadata:
   name: onlinegame
   labels:
     istio-injection: enabled
-</content>

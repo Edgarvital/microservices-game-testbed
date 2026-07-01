@@ -51,5 +51,3 @@ Aplicam-se aos três serviços .NET (auth, inventory, matchmaking). O battle-ser
 - **Persistência:** EF Core 8 + Npgsql (PostgreSQL). Migrations aplicadas automaticamente no boot (`MigrateAsync`), seguidas de seeders idempotentes.
 - **API:** ASP.NET Core Controllers, Swagger/OpenAPI em Development, `GlobalExceptionHandler` + `ProblemDetails`, e um contrato de erro padronizado `ApiErrorResponse` (`code` / `message` / `details`).
 - **Container:** Dockerfile multi-stage (`sdk:8.0` para build, `aspnet:8.0` para runtime), expondo a porta interna **8080**.
-</content>
-</invoke>

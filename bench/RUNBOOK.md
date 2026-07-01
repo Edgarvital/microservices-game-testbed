@@ -99,4 +99,3 @@ gcloud container clusters delete bench --zone=<zona>   # ou eksctl/az equivalent
 - [ ] `run.sh` gerou `summary.md`
 - [ ] Ambiente documentado em `environment.txt`
 - [ ] Cluster destruído após coletar os dados
-</content>

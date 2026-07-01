@@ -101,4 +101,3 @@ Multi-stage: `golang:1.23-alpine` (build) -> `alpine:3.20` (runtime, binário ~2
 ## Segurança (estado baseline)
 
 Coerente com a linha de base Unprotected: gRPC `insecure`, Redis sem auth, WebSocket sem TLS, `CheckOrigin` aceita qualquer origem. O endurecimento da comunicação é feito na camada de infraestrutura (mTLS via mesh) sem alterar o serviço. Ver [roadmap de segurança](../roadmap-seguranca.md).
-</content>

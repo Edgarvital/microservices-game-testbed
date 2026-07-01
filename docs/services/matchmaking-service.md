@@ -107,4 +107,3 @@ DI (`DependencyInjection.cs`): `DbContext` (Npgsql); `IConnectionMultiplexer` Si
 ## Build (Docker)
 
 Multi-stage `sdk:8.0` -> `aspnet:8.0`, porta 8080, entry `OnlineGame.MatchmakingService.Api.dll`.
-</content>

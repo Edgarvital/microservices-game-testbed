@@ -109,4 +109,3 @@ Registre em cada cenário: latência (p50/p95/p99), throughput (req/s) e uso de 
 
 - Cobre só a criptografia de comunicação (pilar mTLS da RSL). Os outros pilares (gestão de segredos com Vault, network policies) são independentes e não devem ser alterados durante estas medições, para não confundir variáveis.
 - Vale como alternativa ao Istio o **Linkerd** (mais leve, overhead menor), caso queira um segundo ponto de comparação de mesh. A flag equivalente é a anotação/`Server`+`ServerAuthorization`; a metodologia é a mesma.
-</content>

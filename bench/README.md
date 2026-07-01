@@ -89,4 +89,3 @@ Para os números serem defensáveis na banca:
 - [ghz - gRPC benchmarking and load testing tool](https://ghz.sh/)
 - [k6 - load testing](https://k6.io/)
 - [Technical Report: Performance Comparison of Service Mesh Frameworks (mTLS)](https://arxiv.org/abs/2411.02267)
-</content>

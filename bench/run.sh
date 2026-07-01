@@ -23,12 +23,15 @@ set -euo pipefail
 NAMESPACE=${NAMESPACE:-onlinegame}
 REPS=${REPS:-5}
 SCENARIOS=${SCENARIOS:-A B C}
+# Apenas os apps sao reiniciados ao trocar de cenario. Os bancos e o Redis NAO,
+# para nao perder dados (Postgres efemero) nem sofrer com boot ordering.
+APP_DEPLOYMENTS=${APP_DEPLOYMENTS:-"auth-service inventory-service matchmaking-service battle-service"}
 SETTLE_SECONDS=${SETTLE_SECONDS:-20}          # espera pos-rollout p/ estabilizar
 JOB_TIMEOUT=${JOB_TIMEOUT:-600}               # timeout por Job (s)
 PLAYER_ID=${PLAYER_ID:-11111111-1111-1111-1111-111111111111}
 
 # ghz (gRPC battle -> inventory)
-GHZ_IMAGE=${GHZ_IMAGE:-bojand/ghz:latest}
+GHZ_IMAGE=${GHZ_IMAGE:-ghcr.io/bojand/ghz:latest}
 GHZ_N=${GHZ_N:-20000}                          # total de requests
 GHZ_C=${GHZ_C:-50}                             # concorrencia
 GHZ_CONN=${GHZ_CONN:-10}                        # conexoes
@@ -113,9 +116,11 @@ configure_mesh() {
     *) echo "Cenario desconhecido: $scenario" >&2; exit 1 ;;
   esac
 
-  log "Recriando pods (rollout restart) para aplicar a config do cenario..."
-  kubectl rollout restart deployment -n "$NAMESPACE" >/dev/null
-  kubectl rollout status deployment -n "$NAMESPACE" --timeout="${JOB_TIMEOUT}s"
+  log "Recriando pods dos apps (rollout restart) para aplicar a config do cenario..."
+  # shellcheck disable=SC2086
+  kubectl rollout restart deployment $APP_DEPLOYMENTS -n "$NAMESPACE" >/dev/null
+  # shellcheck disable=SC2086
+  kubectl rollout status deployment $APP_DEPLOYMENTS -n "$NAMESPACE" --timeout="${JOB_TIMEOUT}s"
   log "Aguardando ${SETTLE_SECONDS}s para estabilizar..."
   sleep "$SETTLE_SECONDS"
 }
