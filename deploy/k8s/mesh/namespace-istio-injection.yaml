@@ -1,0 +1,10 @@
+# Habilita a injecao automatica de sidecar do Istio no namespace.
+# Necessario para que os pods dos servicos ganhem o proxy Envoy (data plane).
+# Apos aplicar, os pods precisam ser recriados: kubectl rollout restart deployment -n onlinegame
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: onlinegame
+  labels:
+    istio-injection: enabled
+</content>

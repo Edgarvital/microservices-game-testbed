@@ -1,0 +1,14 @@
+# FLAG DE CRIPTOGRAFIA = OFF (sem mTLS, texto claro entre servicos)
+# Os sidecars Envoy continuam presentes, mas nao criptografam o trafego.
+# Isso isola o custo DA CRIPTOGRAFIA (comparando com o modo STRICT), mantendo
+# o overhead do sidecar constante entre os dois cenarios.
+# Aplicar: kubectl apply -f peer-authentication-disable.yaml
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: onlinegame
+spec:
+  mtls:
+    mode: DISABLE
+</content>

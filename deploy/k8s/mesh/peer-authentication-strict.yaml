@@ -1,0 +1,12 @@
+# FLAG DE CRIPTOGRAFIA = ON (mTLS obrigatorio entre servicos)
+# Todo trafego east-west no namespace onlinegame passa a exigir mTLS.
+# Aplicar: kubectl apply -f peer-authentication-strict.yaml
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: onlinegame
+spec:
+  mtls:
+    mode: STRICT
+</content>

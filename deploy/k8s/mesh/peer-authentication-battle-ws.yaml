@@ -1,0 +1,27 @@
+# EXCECAO para o WebSocket do battle-service (trafego north-south / externo).
+#
+# Com PeerAuthentication default=STRICT, o sidecar do battle exigiria mTLS de
+# TODA conexao de entrada - inclusive o WebSocket vindo de clientes FORA do mesh,
+# que nao apresentam certificado. Isso quebraria a conexao dos jogadores.
+#
+# Este objeto sobrepoe a politica SO na porta 8080 do battle-service, deixando-a
+# PERMISSIVE (aceita mTLS OU texto claro). O restante do namespace continua STRICT,
+# entao o trafego east-west (battle -> inventory via gRPC) permanece criptografado.
+#
+# Aplicar JUNTO com peer-authentication-strict.yaml quando a flag estiver ON.
+# Se os testes de carga rodarem de DENTRO do mesh (cliente com sidecar), esta
+# excecao nao e necessaria - remova-a para medir tambem o WebSocket sob mTLS.
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: battle-service-ws
+  namespace: onlinegame
+spec:
+  selector:
+    matchLabels:
+      app: battle-service
+  mtls:
+    mode: STRICT
+  portLevelMtls:
+    8080:
+      mode: PERMISSIVE
