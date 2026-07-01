@@ -71,3 +71,7 @@ export_presets.cfg
 docker-data/
 postgres-data/
 vault-data/
+
+# Python (scripts de benchmark)
+__pycache__/
+*.pyc
