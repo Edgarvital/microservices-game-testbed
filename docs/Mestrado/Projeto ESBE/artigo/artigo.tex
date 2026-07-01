@@ -1,0 +1,178 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{url}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+
+\begin{document}
+
+\title{O Custo de Desempenho do mTLS em um Backend de Microsserviços sob Kubernetes: um Estudo Experimental Isolando Sidecar e Criptografia}
+
+\author{
+\IEEEauthorblockN{Edgar Vital}
+\IEEEauthorblockA{Programa de P\'os-Gradua\c{c}\~ao em Ci\^encia da Computa\c{c}\~ao\\
+Disciplina: Engenharia de Software Baseada em Evid\^encias\\
+Orientador da disciplina: Prof. Rodrigo Gusm\~ao de Carvalho Rocha\\
+Email: contato@overdriveconsultoria.com.br}
+}
+
+\maketitle
+
+\begin{abstract}
+A migra\c{c}\~ao para arquiteturas de microsservi\c{c}os orquestradas por Kubernetes dissolveu o per\'imetro de seguran\c{c}a tradicional e ampliou a superf\'icie de ataque, tornando a criptografia do tr\'afego interno (\textit{east-west}) via \textit{mutual TLS} (mTLS) uma contramedida recorrentemente recomendada. Contudo, h\'a escassez de evid\^encias sobre o \emph{custo de desempenho} dessa defesa em sistemas realistas e sobre o quanto desse custo advem do \textit{service mesh} em si versus da criptografia. Este trabalho relata um estudo experimental controlado que mede o \textit{overhead} do mTLS em um \textit{testbed} de microsservi\c{c}os representativo de um jogo multiplayer, combinando gRPC (HTTP/2), REST (HTTP/1.1), WebSocket e mensageria via Redis. Adotamos um desenho de tr\^es tratamentos --- (A) sem \textit{mesh}, (B) \textit{mesh} sem mTLS e (C) \textit{mesh} com mTLS \textit{STRICT} --- que \emph{isola} o custo do \textit{sidecar} do custo da criptografia. Em ambiente local (\textit{kind} + Istio), com oito repeti\c{c}\~oes por tratamento, observamos que o \textit{sidecar} responde pela maior parte da degrada\c{c}\~ao (lat\^encia m\'edia de gRPC $+50{,}9\%$ de A para B), enquanto habilitar o mTLS sobre o \textit{mesh} j\'a presente (B$\rightarrow$C) custa apenas $\approx 5\%$ de lat\^encia e $\approx 5\%$ de vaz\~ao, ao pre\c{c}o de $\approx 40\%$ de CPU adicional no proxy. Conclu\'imos que, uma vez adotado o \textit{mesh}, ativar a criptografia \'e barato --- um argumento pr\'atico a favor do mTLS. Discutimos as amea\c{c}as \`a validade do ambiente local e disponibilizamos o \textit{harness} e os dados para replica\c{c}\~ao.
+\end{abstract}
+
+\begin{IEEEkeywords}
+microsservi\c{c}os, Kubernetes, service mesh, mTLS, Istio, engenharia de software experimental, overhead de desempenho, gRPC
+\end{IEEEkeywords}
+
+\section{Introdu\c{c}\~ao}
+
+A ado\c{c}\~ao de arquiteturas de microsservi\c{c}os orquestradas por Kubernetes tornou-se o padr\~ao \textit{de facto} para sistemas escal\'aveis e resilientes. Entretanto, ao decompor a aplica\c{c}\~ao em muitos componentes din\^amicos e ef\^emeros, esse paradigma dissolve o per\'imetro de seguran\c{c}a tradicional: a prote\c{c}\~ao de borda deixa de ser suficiente diante de uma malha complexa de servi\c{c}os que se comunicam internamente, ampliando a superf\'icie de ataque~\cite{flora2024,baarzi2020}. Um agravante recorrente \'e que as configura\c{c}\~oes padr\~ao priorizam a facilidade de uso em detrimento da seguran\c{c}a: a comunica\c{c}\~ao interna entre servi\c{c}os frequentemente trafega em texto claro e os segredos ficam inadequadamente protegidos, permitindo que uma pequena brecha escale para o comprometimento da infraestrutura por meio de movimenta\c{c}\~ao lateral~\cite{bufalino2025,gunathilake2024}.
+
+A literatura converge para uma abordagem de \textit{defesa em profundidade} na qual a criptografia \'e central, destacando o \textit{mutual TLS} (mTLS) como padr\~ao-ouro para proteger o tr\'afego \textit{east-west}~\cite{fernandez2019,falcao2025}. Contudo, do ponto de vista da engenharia de software, faltam evid\^encias concretas sobre o \emph{impacto de desempenho} dessas defesas em sistemas realistas, e a maioria das avalia\c{c}\~oes emprega aplica\c{c}\~oes-\textit{benchmark} sint\'eticas e homog\^eneas~\cite{zhu2023,bremlerbarr2024}. Persiste ainda uma lacuna metodol\'ogica: os estudos tipicamente reportam o custo agregado de ``ligar o \textit{mesh} com mTLS'', sem separar quanto advem da introdu\c{c}\~ao do \textit{proxy sidecar} (que reprocessa o protocolo) e quanto advem especificamente do \textit{handshake} e da cifragem do mTLS.
+
+Este trabalho aborda essa lacuna com um estudo experimental controlado. O objeto de estudo \'e um \textit{testbed} de microsservi\c{c}os que reproduz o \textit{backend} de um jogo multiplayer, deliberadamente heterog\^eneo em seus mecanismos de comunica\c{c}\~ao (gRPC sobre HTTP/2, REST sobre HTTP/1.1, WebSocket e \textit{pub/sub} via Redis), aproximando-se de cargas reais em vez de aplica\c{c}\~oes triviais. Formulamos as seguintes quest\~oes de pesquisa:
+
+\begin{itemize}
+  \item \textbf{QP1.} Qual \'e o \textit{overhead} de lat\^encia e vaz\~ao introduzido pela ativa\c{c}\~ao do mTLS no tr\'afego \textit{east-west}?
+  \item \textbf{QP2.} Qual \'e a contribui\c{c}\~ao relativa do \textit{proxy sidecar} versus a da criptografia mTLS para esse \textit{overhead}?
+  \item \textbf{QP3.} Qual \'e o custo em recursos computacionais (CPU e mem\'oria) do \textit{sidecar} que executa o mTLS?
+\end{itemize}
+
+As principais contribui\c{c}\~oes s\~ao: (i) um desenho experimental de tr\^es tratamentos que \emph{isola} o custo do \textit{sidecar} do custo da criptografia; (ii) evid\^encias emp\'iricas de \textit{overhead} coletadas sobre protocolos heterog\^eneos (gRPC e REST) em um sistema realista; e (iii) um \textit{harness} de \textit{benchmark} reproduz\'ivel e um conjunto de dados abertos. Este estudo caracteriza-se como uma \emph{extens\~ao} focada em experimenta\c{c}\~ao~\cite{wohlin2012}: aplica defesas j\'a recomendadas pela teoria em um cen\'ario customizado e as mede.
+
+\section{Fundamenta\c{c}\~ao Te\'orica}
+
+\subsection{Microsservi\c{c}os e Kubernetes}
+A arquitetura de microsservi\c{c}os divide a aplica\c{c}\~ao em componentes pequenos e independentes que se comunicam por APIs bem definidas. O Kubernetes orquestra esses componentes (\textit{containers}), gerenciando implanta\c{c}\~ao, escalonamento e opera\c{c}\~ao. A natureza din\^amica de \textit{pods} e servi\c{c}os torna o tr\'afego interno --- denominado \textit{east-west}, em contraste com o tr\'afego \textit{north-south} de entrada/sa\'ida --- volumoso e dif\'icil de proteger por meios tradicionais.
+
+\subsection{Service Mesh, Sidecar e mTLS}
+Um \textit{service mesh} (por exemplo, Istio) prov\^e comunica\c{c}\~ao servi\c{c}o-a-servi\c{c}o observ\'avel e segura por meio de \textit{proxies} (Envoy) injetados como \textit{sidecars} em cada \textit{pod}. O tr\'afego da aplica\c{c}\~ao \'e interceptado transparentemente pelo \textit{sidecar}, que pode aplicar \textit{mutual TLS}: cada servi\c{c}o recebe uma identidade criptogr\'afica e a autentica\c{c}\~ao \'e m\'utua, mitigando \textit{spoofing} e ataques \textit{man-in-the-middle}. Como a criptografia ocorre no plano de dados (o \textit{sidecar}), ela \'e transparente \`a aplica\c{c}\~ao --- propriedade que exploramos para variar apenas a configura\c{c}\~ao de seguran\c{c}a, mantendo o c\'odigo dos servi\c{c}os id\^entico entre tratamentos. Estudos apontam que o \textit{sidecar} incorre em \textit{overhead} substancial de CPU e lat\^encia, e que o reprocessamento de protocolo (\textit{protocol parsing}) domina esse custo em \textit{proxies} HTTP~\cite{zhu2023}.
+
+\section{Trabalhos Relacionados}
+
+\textbf{Defesas criptogr\'aficas em Kubernetes.} Fernandez e Brito~\cite{fernandez2019} prop\~oem um orquestrador que integra Intel SGX e medem \textit{overhead} expressivo em opera\c{c}\~oes cr\'iticas (por exemplo, $2{,}37\times$ em \textit{auto-scaling}). Falc\~ao \textit{et al.}~\cite{falcao2025} avaliam modelos de \textit{deployment} confidencial (Intel TDX, AMD SEV-SNP) em tr\^es provedores de nuvem, evidenciando \textit{trade-offs} de desempenho entre arquiteturas. Stoyanov \textit{et al.}~\cite{stoyanov2024} tratam de criptografia fim-a-fim para \textit{checkpoint/restore} de \textit{containers}, mostrando que otimiza\c{c}\~oes podem reduzir o \textit{overhead} da cifragem em at\'e $62\%$. Esses trabalhos motivam nosso foco no custo da criptografia, mas atuam em camadas distintas (\textit{enclaves}, \textit{snapshots}), n\~ao no tr\'afego \textit{east-west} via \textit{mesh}.
+
+\textbf{Seguran\c{c}a de microsservi\c{c}os.} Flora e Antunes~\cite{flora2024} prop\~oem um \textit{benchmark} e \textit{dataset} para detec\c{c}\~ao de intrus\~ao em microsservi\c{c}os, refor\c{c}ando a necessidade de avalia\c{c}\~oes empíricas padronizadas. Baarzi \textit{et al.}~\cite{baarzi2020} defendem microsservi\c{c}os contra ataques de nega\c{c}\~ao de servi\c{c}o via \textit{fissioning} adaptativo. Tais estudos enderecam a face de \emph{efic\'acia} da seguran\c{c}a, complementar \`a face de \emph{custo} investigada aqui.
+
+\textbf{Overhead de \textit{service mesh} e mTLS.} Zhu \textit{et al.}~\cite{zhu2023}, com a ferramenta MeshInsight, dissecam o \textit{overhead} de \textit{sidecars} e reportam aumentos de lat\^encia de at\'e $269\%$ e de CPU de at\'e $163\%$, atribuindo o custo dominante ao reprocessamento de protocolo. Bremler-Barr \textit{et al.}~\cite{bremlerbarr2024} comparam \textit{frameworks} e medem, ao habilitar mTLS, aumentos de lat\^encia de $166\%$ (Istio com \textit{sidecar}), $33\%$ (Linkerd) e $8\%$ (Istio Ambient). Nosso trabalho difere ao (i) \emph{separar} explicitamente o custo do \textit{sidecar} do custo do mTLS por meio de um tratamento intermedi\'ario e (ii) medir sobre protocolos heterog\^eneos em um sistema de aplica\c{c}\~ao realista, em vez de um \textit{echo server} sint\'etico.
+
+\section{Metodologia Experimental}
+
+Seguimos o paradigma \textit{Goal-Question-Metric}~\cite{basili1994}, as diretrizes de experimenta\c{c}\~ao em engenharia de software~\cite{wohlin2012} e as boas pr\'aticas de an\'alise de desempenho de sistemas~\cite{jain1991}.
+
+\subsection{Objetivo (GQM)}
+\emph{Analisar} a ativa\c{c}\~ao do mTLS via \textit{service mesh}, \emph{com o prop\'osito de} avaliar seu custo de desempenho, \emph{no que diz respeito a} lat\^encia, vaz\~ao e consumo de recursos, \emph{do ponto de vista do} engenheiro de software, \emph{no contexto de} um \textit{backend} de microsservi\c{c}os heterog\^eneo executando em Kubernetes.
+
+\subsection{Objeto de Estudo}
+O \textit{testbed} \'e o \textit{backend} de um jogo multiplayer de cartas, composto por quatro microsservi\c{c}os: \textit{auth} (autentica\c{c}\~ao e emiss\~ao de JWT), \textit{inventory} (invent\'ario, expondo REST e gRPC), \textit{matchmaking} (pareamento por arena) e \textit{battle} (partidas em tempo real, em Go). Os tr\^es primeiros s\~ao implementados em C\#/.NET~8 seguindo \textit{Clean Architecture}; o \textit{battle} \'e escrito em Go. A comunica\c{c}\~ao entre servi\c{c}os \'e deliberadamente heterog\^enea: \textit{matchmaking}$\rightarrow$\textit{inventory} via REST (HTTP/1.1); \textit{battle}$\rightarrow$\textit{inventory} via gRPC (HTTP/2); \textit{matchmaking}$\rightarrow$\textit{battle} via Redis \textit{pub/sub}; e clientes$\rightarrow$\textit{battle} via WebSocket. Cada servi\c{c}o C\# possui banco PostgreSQL pr\'oprio (\textit{database-per-service}). Essa heterogeneidade \'e intencional: aproxima o experimento de cargas reais e permite contrastar o \textit{overhead} do mTLS entre HTTP/1.1 e HTTP/2.
+
+\subsection{Vari\'aveis e Tratamentos}
+A \textbf{vari\'avel independente} \'e a configura\c{c}\~ao de seguran\c{c}a da comunica\c{c}\~ao, com tr\^es tratamentos (Tabela~\ref{tab:tratamentos}). O tratamento intermedi\'ario B \'e a chave do desenho: mant\'em o \textit{sidecar} presente, por\'em sem criptografia, permitindo isolar o custo do \textit{proxy} (A$\rightarrow$B) do custo espec\'ifico do mTLS (B$\rightarrow$C). As \textbf{vari\'aveis dependentes} s\~ao: lat\^encia (m\'edia, p50, p95, p99), vaz\~ao (requisi\c{c}\~oes/s) e uso de recursos (CPU e mem\'oria do \textit{container} de aplica\c{c}\~ao e do \textit{sidecar}). Fatores como imagens dos servi\c{c}os, r\'eplicas, recursos e carga foram mantidos constantes entre tratamentos; varia-se \emph{apenas} a \textit{feature flag} de criptografia.
+
+\begin{table}[t]
+\caption{Tratamentos experimentais}
+\label{tab:tratamentos}
+\centering
+\begin{tabular}{@{}clcc@{}}
+\toprule
+\textbf{Trat.} & \textbf{Descri\c{c}\~ao} & \textbf{Sidecar} & \textbf{mTLS} \\
+\midrule
+A & Sem \textit{service mesh} (linha de base) & N\~ao & --- \\
+B & \textit{Mesh} com mTLS desabilitado (\texttt{DISABLE}) & Sim & N\~ao \\
+C & \textit{Mesh} com mTLS obrigat\'orio (\texttt{STRICT}) & Sim & Sim \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Cargas de Trabalho}
+Duas cargas foram aplicadas \emph{de dentro do \textit{mesh}} (a partir de \textit{pods} com \textit{sidecar}), pois no modo \texttt{STRICT} conex\~oes externas sem mTLS seriam rejeitadas, conforme boas pr\'aticas de \textit{benchmark}~\cite{istioperf}:
+\begin{itemize}
+  \item \textbf{gRPC (m\'etrica principal):} a chamada \textit{battle}$\rightarrow$\textit{inventory} (\texttt{GetBattleStats}), um salto \textit{east-west} isolado sobre HTTP/2, gerada com a ferramenta \textbf{ghz}~\cite{ghz} ($10\,000$ requisi\c{c}\~oes, sendo $1\,000$ descartadas como aquecimento; concorr\^encia $50$; $10$ conex\~oes).
+  \item \textbf{REST (fluxo fim-a-fim):} a chamada cliente$\rightarrow$\textit{matchmaking} (\texttt{/join}), que internamente aciona o \textit{inventory}, gerada com \textbf{k6}~\cite{k6} ($30$ \textit{virtual users} por $20$\,s).
+\end{itemize}
+
+\subsection{Ambiente e Procedimento}
+O experimento executou em um \textit{cluster} \textbf{kind}~\cite{kind} de n\'o \'unico (Kubernetes v1.36.1) sobre Docker Desktop/WSL2 (Windows~11), com \textbf{Istio~1.30.2} (perfil \textit{minimal}, \textit{native sidecars}) e uma r\'eplica por servi\c{c}o. Para cada tratamento, o procedimento foi: (1) configurar a inje\c{c}\~ao de \textit{sidecar} e a \texttt{PeerAuthentication} correspondente; (2) reiniciar apenas os \textit{pods} de aplica\c{c}\~ao (os bancos e o Redis s\~ao preservados); (3) aguardar estabiliza\c{c}\~ao; (4) executar uma rodada de aquecimento descartada; (5) executar $8$ repeti\c{c}\~oes medidas. A cifragem \'e controlada por uma \textit{feature flag} declarativa (\texttt{PeerAuthentication} \texttt{STRICT} vs.\ \texttt{DISABLE}), sem qualquer altera\c{c}\~ao no c\'odigo ou nas imagens dos servi\c{c}os, garantindo que a criptografia seja a \'unica vari\'avel manipulada. Todo o \textit{harness} de coleta e agrega\c{c}\~ao \'e \textit{script}-ado e reproduz\'ivel.
+
+\section{Resultados}
+
+As Tabelas~\ref{tab:grpc} e~\ref{tab:rest} apresentam, respectivamente, os resultados de gRPC e REST (m\'edia\,$\pm$\,desvio padr\~ao sobre $8$ repeti\c{c}\~oes).
+
+\begin{table}[t]
+\caption{gRPC: \textit{battle}$\rightarrow$\textit{inventory} (\texttt{GetBattleStats})}
+\label{tab:grpc}
+\centering
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{M\'etrica} & \textbf{A (sem mesh)} & \textbf{B (mTLS off)} & \textbf{C (mTLS on)} \\
+\midrule
+Vaz\~ao (req/s)   & $3601{,}8 \pm 343{,}6$ & $2589{,}4 \pm 114{,}9$ & $2470{,}5 \pm 88{,}4$ \\
+Lat.\ m\'edia (ms) & $10{,}87 \pm 1{,}46$   & $16{,}40 \pm 0{,}76$   & $17{,}26 \pm 0{,}64$ \\
+p50 (ms)          & $10{,}40$              & $16{,}21$              & $16{,}92$ \\
+p95 (ms)          & $18{,}20$              & $24{,}74$              & $26{,}17$ \\
+p99 (ms)          & $22{,}96$              & $28{,}78$              & $30{,}63$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\caption{REST: cliente$\rightarrow$\textit{matchmaking} (\texttt{/join})}
+\label{tab:rest}
+\centering
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{M\'etrica} & \textbf{A (sem mesh)} & \textbf{B (mTLS off)} & \textbf{C (mTLS on)} \\
+\midrule
+Vaz\~ao (req/s)   & $5407{,}0 \pm 39{,}4$ & $2556{,}8 \pm 52{,}0$ & $2428{,}5 \pm 30{,}2$ \\
+Lat.\ m\'edia (ms) & $5{,}44 \pm 0{,}04$   & $11{,}64 \pm 0{,}24$  & $12{,}25 \pm 0{,}15$ \\
+p50 (ms)          & $5{,}24$              & $11{,}39$             & $12{,}01$ \\
+p95 (ms)          & $7{,}80$              & $15{,}32$             & $16{,}18$ \\
+p99 (ms)          & $9{,}63$              & $17{,}85$             & $18{,}77$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{QP1 (overhead do mTLS).} Habilitar o mTLS sobre o \textit{mesh} j\'a presente (B$\rightarrow$C) elevou a lat\^encia m\'edia em $+5{,}2\%$ (gRPC) e $+5{,}2\%$ (REST), e reduziu a vaz\~ao em $-4{,}6\%$ (gRPC) e $-5{,}0\%$ (REST). O efeito \'e consistente tamb\'em nas caudas (p95/p99). Considerando o custo total do endurecimento (A$\rightarrow$C), a lat\^encia m\'edia cresceu $+58{,}8\%$ (gRPC) e $+125{,}2\%$ (REST).
+
+\textbf{QP2 (sidecar vs.\ criptografia).} A decomposi\c{c}\~ao \'e o resultado central: a introdu\c{c}\~ao do \textit{sidecar} (A$\rightarrow$B) responde por $+50{,}9\%$ (gRPC) e $+114{,}0\%$ (REST) de lat\^encia m\'edia, ao passo que a criptografia mTLS em si (B$\rightarrow$C) adiciona apenas $\approx 5\%$. Em ambos os protocolos, \emph{a maior parte do custo advem do \textit{proxy}, n\~ao da cifragem}.
+
+\textbf{QP3 (recursos).} Sob carga gRPC sustentada no tratamento C, o \textit{container} de aplica\c{c}\~ao do \textit{inventory} consumiu $\approx 880$\,m de CPU e $\approx 472$\,MiB de mem\'oria, enquanto o \textit{sidecar} Envoy consumiu $\approx 380$\,m de CPU e $\approx 40$\,MiB. O \textit{proxy} adiciona, portanto, cerca de $40\%$ de CPU relativa \`a aplica\c{c}\~ao, al\'em de mem\'oria fixa por \textit{pod} --- confirmando que o custo do endurecimento \'e tanto de lat\^encia quanto de CPU.
+
+\section{Discuss\~ao}
+
+O achado principal --- o \textit{sidecar} domina o custo, e a criptografia adiciona $\approx 5\%$ --- alinha-se qualitativamente a Zhu \textit{et al.}~\cite{zhu2023}, que atribuem o custo dominante ao reprocessamento de protocolo pelo \textit{proxy}, e n\~ao \`as opera\c{c}\~oes criptogr\'aficas. A implica\c{c}\~ao pr\'atica \'e direta: \emph{uma vez que a organiza\c{c}\~ao decide adotar um \textit{service mesh}} (por observabilidade, roteamento ou pol\'iticas), o custo incremental de ativar o mTLS \'e pequeno, o que fortalece o argumento de custo-benef\'icio a favor da criptografia \textit{east-west}.
+
+A magnitude do custo total (A$\rightarrow$C) que observamos ($+58{,}8\%$ em gRPC) \'e menor que os $+166\%$ reportados por Bremler-Barr \textit{et al.}~\cite{bremlerbarr2024} para Istio com \textit{sidecar}. A diferen\c{c}a \'e explic\'avel por fatores metodol\'ogicos e de ambiente: (i) nosso desenho separa o custo do \textit{sidecar} do custo do mTLS, evitando atribuir todo o \textit{overhead} \`a criptografia; (ii) o ambiente de n\'o \'unico usa comunica\c{c}\~ao \textit{loopback}, sem lat\^encia de rede f\'isica; e (iii) diferen\c{c}as de vers\~ao, carga e \textit{payload}. Observamos ainda que o \textit{overhead} \emph{relativo} foi maior no REST (HTTP/1.1) do que no gRPC (HTTP/2): como o gRPC multiplexa requisi\c{c}\~oes em conex\~oes persistentes, o custo fixo por conex\~ao do \textit{proxy} \'e amortizado, ao passo que o padr\~ao REST paga esse custo mais frequentemente. Esse contraste refor\c{c}a a import\^ancia de medir sobre protocolos heterog\^eneos, como fizemos.
+
+\section{Amea\c{c}as \`a Validade}
+
+\textbf{Validade externa.} A principal limita\c{c}\~ao \'e o ambiente de \emph{n\'o \'unico} (\textit{kind}): o tr\'afego \textit{pod}-a-\textit{pod} ocorre em \textit{loopback}, sem lat\^encia de rede real. Como a lat\^encia-base \'e m\'inima, o \textit{overhead} \emph{relativo} do \textit{sidecar}/mTLS tende a ser \emph{superestimado} em rela\c{c}\~ao a um \textit{cluster} multi-n\'o; espera-se que em nuvem o custo relativo do mTLS seja ainda menor. Usou-se uma r\'eplica por servi\c{c}o e cargas moderadas. Esses resultados devem, portanto, ser lidos como um estudo \emph{preliminar}, a ser complementado por uma r\'eplica em ambiente multi-n\'o.
+
+\textbf{Validade interna.} A execu\c{c}\~ao em Docker Desktop/WSL2 compartilha recursos com o \textit{host}, introduzindo \textit{jitter}; o tratamento A (mais r\'apido) foi o mais sens\'ivel, o que se reflete em seu maior desvio padr\~ao. Mitigamos com rodada de aquecimento, reinicializa\c{c}\~ao controlada entre tratamentos e $8$ repeti\c{c}\~oes.
+
+\textbf{Validade de constru\c{c}\~ao.} No fluxo REST, o \textit{endpoint} do \textit{inventory} exige JWT; a chamada interna \textit{matchmaking}$\rightarrow$\textit{inventory} retorna erro de autoriza\c{c}\~ao r\'apido (com \textit{fallback}), de modo que esse salto \'e curto. Assim, o resultado de REST mede sobretudo o \textit{overhead} do \textit{sidecar} no \textit{matchmaking}, e a m\'etrica gRPC \'e a mais fiel a um salto \textit{east-west} completo.
+
+\textbf{Validade de conclus\~ao.} Reportamos m\'edia e desvio padr\~ao, mas n\~ao aplicamos testes de signific\^ancia formais; dada a baixa dispers\~ao de B e C, as diferen\c{c}as B$\rightarrow$C s\~ao consistentes, por\'em uma an\'alise inferencial (por exemplo, ANOVA) \'e recomendada para a vers\~ao final.
+
+\section{Conclus\~ao e Trabalhos Futuros}
+
+Este estudo mediu, com evid\^encias, o custo de desempenho do mTLS em um \textit{backend} de microsservi\c{c}os realista sob Kubernetes, adotando um desenho de tr\^es tratamentos que isola o custo do \textit{sidecar} do custo da criptografia. Os resultados indicam que o \textit{proxy sidecar} responde pela maior parte da degrada\c{c}\~ao, enquanto ativar o mTLS custa apenas $\approx 5\%$ de lat\^encia e vaz\~ao adicionais --- um custo modesto que respalda a ado\c{c}\~ao da criptografia \textit{east-west} quando o \textit{mesh} j\'a est\'a em uso.
+
+Como trabalho futuro, planejamos: (i) replicar o experimento em \textit{cluster} multi-n\'o na nuvem, para avaliar a validade externa; (ii) integrar a face de \emph{efic\'acia} de seguran\c{c}a, medindo a redu\c{c}\~ao de vulnerabilidades com \textit{Kube-bench} e \textit{Kube-hunter} antes e depois das defesas, completando a an\'alise de custo-benef\'icio; (iii) estender as contramedidas a gest\~ao din\^amica de segredos (\textit{HashiCorp Vault}) e \textit{network policies}; e (iv) comparar o modelo de \textit{sidecar} com arquiteturas sem \textit{sidecar} (Istio Ambient), que a literatura sugere reduzir drasticamente o \textit{overhead}~\cite{bremlerbarr2024}. Este estudo constitui o n\'ucleo de experimenta\c{c}\~ao da disserta\c{c}\~ao em andamento, cujo objetivo maior \'e consolidar um guia de boas pr\'aticas de seguran\c{c}a baseado em evid\^encias.
+
+\section*{Disponibilidade de Artefatos}
+O \textit{testbed}, o \textit{harness} de \textit{benchmark} (\textit{scripts} de execu\c{c}\~ao, cargas e agrega\c{c}\~ao) e os dados coletados est\~ao dispon\'iveis no reposit\'orio do projeto, permitindo a replica\c{c}\~ao integral dos experimentos.
+
+\bibliographystyle{IEEEtran}
+\bibliography{referencias}
+
+\end{document}
