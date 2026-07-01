@@ -1,6 +1,6 @@
 # Roadmap de segurança
 
-Este documento conecta o testbed à pesquisa de mestrado ([RSL](./Mestrado/main.md)). O código está na **linha de base "Unprotected" (Fase 1)**: o objetivo é usá-la como o "antes" e aplicar, sobre ela, as contramedidas criptográficas que a Revisão Sistemática da Literatura apontou como mais efetivas, medindo o "depois".
+Este documento conecta o testbed à pesquisa de mestrado ([RSL](./Mestrado/RSL%20Parcial/main.md)). O código está na **linha de base "Unprotected" (Fase 1)**: o objetivo é usá-la como o "antes" e aplicar, sobre ela, as contramedidas criptográficas que a Revisão Sistemática da Literatura apontou como mais efetivas, medindo o "depois".
 
 ## Pergunta de pesquisa (RQ1)
 

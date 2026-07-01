@@ -15,7 +15,7 @@ O sistema implementa o backend de um jogo: autenticação, inventário de cartas
 | [battle-service](./services/battle-service.md) | Partidas 1v1 em tempo real (Go), WebSocket, gRPC e Redis Pub/Sub |
 | [Infraestrutura e deploy](./infraestrutura-deploy.md) | Docker Compose, Kubernetes, portas, bancos, Redis |
 | [Roadmap de segurança](./roadmap-seguranca.md) | Da baseline Unprotected às contramedidas da RSL |
-| [Contexto de mestrado](./Mestrado/main.md) | Artigo da Revisão Sistemática da Literatura |
+| [Contexto de mestrado](./Mestrado/RSL%20Parcial/main.md) | Artigo da Revisão Sistemática da Literatura |
 
 ## Componentes
 

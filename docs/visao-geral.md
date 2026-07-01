@@ -2,7 +2,7 @@
 
 ## Contexto
 
-O projeto é o backend de um jogo multiplayer online baseado em cartas. Ele existe como **testbed** para a pesquisa de mestrado cujo tema é mitigar vulnerabilidades em microsserviços orquestrados por Kubernetes com contramedidas criptográficas (mTLS, rotação de segredos, network policies). Ver [contexto da RSL](./Mestrado/main.md).
+O projeto é o backend de um jogo multiplayer online baseado em cartas. Ele existe como **testbed** para a pesquisa de mestrado cujo tema é mitigar vulnerabilidades em microsserviços orquestrados por Kubernetes com contramedidas criptográficas (mTLS, rotação de segredos, network policies). Ver [contexto da RSL](./Mestrado/RSL%20Parcial/main.md).
 
 O estado atual do código é a **linha de base "Unprotected"** descrita no `deploy/README.md`: segredos e conexões em texto claro por design. Isso é intencional: representa o "antes" contra o qual as contramedidas serão aplicadas e medidas (por exemplo com Kube-bench / Kube-hunter).
 
