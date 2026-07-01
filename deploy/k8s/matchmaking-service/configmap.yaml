@@ -8,3 +8,8 @@ data:
   ASPNETCORE_URLS: http://+:8080
   ConnectionStrings__MatchmakingDb: Host=matchmaking-db;Port=5432;Database=onlinegame_matchmaking;Username=postgres;Password=postgres
   ConnectionStrings__Redis: redis:6379
+  # DNS interno do cluster para a chamada REST de poder do jogador
+  Services__InventoryServiceUrl: http://inventory-service:8080
+  # URL do WebSocket entregue ao cliente. Sem Ingress, ajuste conforme o acesso
+  # externo ao battle-service (ex.: port-forward ou host do Ingress).
+  Services__BattleServiceWsBaseUrl: ws://localhost:8083/ws

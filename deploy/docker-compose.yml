@@ -118,6 +118,10 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__MatchmakingDb: Host=matchmaking-db;Port=5432;Database=onlinegame_matchmaking;Username=postgres;Password=postgres
       ConnectionStrings__Redis: redis:6379
+      # Resolve entre containers (o default localhost nao funciona na rede do Compose)
+      Services__InventoryServiceUrl: http://inventory-service:8080
+      # URL entregue ao cliente para o WebSocket (cliente roda no host, via porta publicada 8083)
+      Services__BattleServiceWsBaseUrl: ws://localhost:8083/ws
     ports:
       - "8082:8080"
 
