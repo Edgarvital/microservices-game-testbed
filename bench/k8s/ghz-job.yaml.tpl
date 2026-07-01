@@ -42,7 +42,7 @@ spec:
             - "--connections=${GHZ_CONN}"
             - "--skipFirst=${GHZ_SKIP}"
             - "--format=json"
-            - "inventory-service:8080"
+            - "inventory-service:8081"
           volumeMounts:
             - name: proto
               mountPath: /proto

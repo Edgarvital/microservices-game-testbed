@@ -15,10 +15,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.ConfigureEndpointDefaults(endpointOptions =>
-    {
-        endpointOptions.Protocols = HttpProtocols.Http1AndHttp2;
-    });
+    // REST (HTTP/1.1) e gRPC (HTTP/2 h2c) precisam de portas separadas em cleartext:
+    // um unico endpoint cleartext Http1AndHttp2 nao negocia h2c de forma confiavel
+    // (sem TLS/ALPN o Kestrel atende como HTTP/1.1 e o gRPC falha com Unavailable).
+    options.ListenAnyIP(8080, listenOptions => listenOptions.Protocols = HttpProtocols.Http1);
+    options.ListenAnyIP(8081, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
 });
 
 // Add services to the container.

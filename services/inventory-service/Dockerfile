@@ -13,9 +13,11 @@ RUN dotnet publish "OnlineGame.InventoryService.Api.csproj" -c Release -o /app/p
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
-ENV ASPNETCORE_URLS=http://+:8080
+# ASPNETCORE_URLS omitido de proposito: os endpoints (8080 REST/Http1, 8081 gRPC/Http2)
+# sao definidos por codigo no Program.cs (ListenAnyIP com protocolo por porta).
 ENV ASPNETCORE_ENVIRONMENT=Development
 EXPOSE 8080
+EXPOSE 8081
 
 COPY --from=build /app/publish .
 

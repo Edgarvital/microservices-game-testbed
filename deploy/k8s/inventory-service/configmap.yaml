@@ -5,5 +5,5 @@ metadata:
   namespace: onlinegame
 data:
   ASPNETCORE_ENVIRONMENT: Development
-  ASPNETCORE_URLS: http://+:8080
+  # ASPNETCORE_URLS omitido: endpoints (8080 REST, 8081 gRPC) definidos no Program.cs
   ConnectionStrings__InventoryDb: Host=inventory-db;Port=5432;Database=onlinegame_inventory;Username=postgres;Password=postgres
