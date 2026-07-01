@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package onlinegame.inventory.v1;
+
+option go_package = "onlinegame/battle-service/internal/gateway/inventorypb";
+option csharp_namespace = "OnlineGame.Inventory.V1";
+
+service InventoryService {
+  rpc GetBattleStats (GetBattleStatsRequest) returns (GetBattleStatsResponse);
+}
+
+message GetBattleStatsRequest {
+  string player_id = 1;
+}
+
+message GetBattleStatsResponse {
+  int32 max_hp = 1;
+  int32 base_damage = 2;
+  double move_speed = 3;
+}

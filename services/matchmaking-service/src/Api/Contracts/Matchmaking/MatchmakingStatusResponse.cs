@@ -8,6 +8,7 @@ public sealed class MatchmakingStatusResponse
     public string ArenaName { get; init; } = string.Empty;
     public int Power { get; init; }
     public Guid? MatchId { get; init; }
+    public string? BattleWsUrl { get; init; }
     public Guid? OpponentId { get; init; }
     public DateTime UpdatedAtUtc { get; init; }
 }

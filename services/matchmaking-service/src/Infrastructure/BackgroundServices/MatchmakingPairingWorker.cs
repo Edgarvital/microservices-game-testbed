@@ -1,23 +1,30 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 using OnlineGame.MatchmakingService.Core.Application.Matchmaking.Queue;
 using OnlineGame.MatchmakingService.Core.Application.Matchmaking.Status;
 using OnlineGame.MatchmakingService.Core.Application.Repositories;
+using StackExchange.Redis;
 
 namespace OnlineGame.MatchmakingService.Infrastructure.BackgroundServices;
 
 public sealed class MatchmakingPairingWorker : BackgroundService
 {
+    private const string MatchFoundChannel = "battle:match-found";
+
     private readonly ILogger<MatchmakingPairingWorker> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IConnectionMultiplexer _redis;
 
     public MatchmakingPairingWorker(
         ILogger<MatchmakingPairingWorker> logger,
-        IServiceScopeFactory scopeFactory)
+        IServiceScopeFactory scopeFactory,
+        IConnectionMultiplexer redis)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
+        _redis = redis;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -59,6 +66,19 @@ public sealed class MatchmakingPairingWorker : BackgroundService
                         matchId,
                         stoppingToken);
 
+                    var matchFoundEvent = new MatchFoundEvent(
+                        matchId.ToString(),
+                        arenaId.ToString(),
+                        arena?.Name ?? "Unknown",
+                        first.PlayerId.ToString(),
+                        second.PlayerId.ToString(),
+                        first.Power,
+                        second.Power);
+
+                    await _redis.GetSubscriber().PublishAsync(
+                        RedisChannel.Literal(MatchFoundChannel),
+                        JsonSerializer.Serialize(matchFoundEvent, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+
                     _logger.LogInformation(
                         "Partida Encontrada | MatchId: {MatchId} | Arena: {ArenaName} ({ArenaId}) | Players: {PlayerA} vs {PlayerB} | Power: {PowerA} vs {PowerB}",
                         matchId,
@@ -75,3 +95,12 @@ public sealed class MatchmakingPairingWorker : BackgroundService
         }
     }
 }
+
+internal sealed record MatchFoundEvent(
+    string MatchId,
+    string ArenaId,
+    string ArenaName,
+    string PlayerAId,
+    string PlayerBId,
+    int PlayerAPower,
+    int PlayerBPower);

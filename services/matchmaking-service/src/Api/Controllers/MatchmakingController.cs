@@ -3,6 +3,7 @@ using OnlineGame.MatchmakingService.Api.Contracts.Common;
 using OnlineGame.MatchmakingService.Api.Contracts.Matchmaking;
 using OnlineGame.MatchmakingService.Core.Application.Matchmaking.Join;
 using OnlineGame.MatchmakingService.Core.Application.Matchmaking.Status;
+using Microsoft.Extensions.Configuration;
 
 namespace OnlineGame.MatchmakingService.Api.Controllers;
 
@@ -12,11 +13,16 @@ public sealed class MatchmakingController : ControllerBase
 {
     private readonly IJoinMatchmakingHandler _joinMatchmakingHandler;
     private readonly IMatchmakingStatusStore _matchmakingStatusStore;
+    private readonly string _battleWsBaseUrl;
 
-    public MatchmakingController(IJoinMatchmakingHandler joinMatchmakingHandler, IMatchmakingStatusStore matchmakingStatusStore)
+    public MatchmakingController(
+        IJoinMatchmakingHandler joinMatchmakingHandler,
+        IMatchmakingStatusStore matchmakingStatusStore,
+        IConfiguration configuration)
     {
         _joinMatchmakingHandler = joinMatchmakingHandler;
         _matchmakingStatusStore = matchmakingStatusStore;
+        _battleWsBaseUrl = configuration["Services:BattleServiceWsBaseUrl"] ?? "ws://localhost:8083/ws";
     }
 
     [HttpPost("join")]
@@ -60,8 +66,19 @@ public sealed class MatchmakingController : ControllerBase
             ArenaName = status.ArenaName,
             Power = status.Power,
             MatchId = status.MatchId,
+            BattleWsUrl = BuildBattleWsUrl(status.MatchId, status.PlayerId),
             OpponentId = status.OpponentId,
             UpdatedAtUtc = status.UpdatedAtUtc
         });
+    }
+
+    private string? BuildBattleWsUrl(Guid? matchId, Guid playerId)
+    {
+        if (!matchId.HasValue)
+        {
+            return null;
+        }
+
+        return $"{_battleWsBaseUrl}?matchId={matchId.Value:D}&playerId={playerId:D}";
     }
 }

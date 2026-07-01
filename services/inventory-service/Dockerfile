@@ -1,7 +1,10 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-COPY ./src ./src
+# When built from repo root as context, copy service sources and the shared proto
+# into the build context so Grpc.Tools can find the .proto files referenced
+COPY services/inventory-service/src ./src
+COPY proto /proto
 WORKDIR /src/src/Api
 
 RUN dotnet restore "OnlineGame.InventoryService.Api.csproj"

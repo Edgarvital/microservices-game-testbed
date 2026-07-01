@@ -18,6 +18,7 @@ Serviços:
 - `auth-service`: `http://localhost:8080`
 - `inventory-service`: `http://localhost:8081`
 - `matchmaking-service`: `http://localhost:8082`
+- `battle-service`: `http://localhost:8083`
 - `auth-db` (PostgreSQL): `localhost:5432`
 - `inventory-db` (PostgreSQL): `localhost:5433`
 - `matchmaking-db` (PostgreSQL): `localhost:5434`

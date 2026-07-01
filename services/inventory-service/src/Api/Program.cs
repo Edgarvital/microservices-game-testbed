@@ -1,18 +1,30 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using OnlineGame.InventoryService.Api.Contracts.Common;
+using OnlineGame.InventoryService.Api.Grpc;
 using OnlineGame.InventoryService.Api.Middleware;
+using OnlineGame.Inventory.V1;
 using OnlineGame.InventoryService.Infrastructure;
 using OnlineGame.InventoryService.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ConfigureEndpointDefaults(endpointOptions =>
+    {
+        endpointOptions.Protocols = HttpProtocols.Http1AndHttp2;
+    });
+});
+
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddGrpc();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var jwtSecret = builder.Configuration["Jwt:Secret"];
@@ -110,13 +122,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
-
 app.UseExceptionHandler();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapGrpcService<InventoryGrpcService>();
 app.MapControllers();
 
 app.Run();

@@ -71,8 +71,8 @@ services:
 
   inventory-service:
     build:
-      context: ../services/inventory-service
-      dockerfile: Dockerfile
+      context: ../
+      dockerfile: services/inventory-service/Dockerfile
     container_name: onlinegame-inventory-service
     depends_on:
       inventory-db:
@@ -120,3 +120,19 @@ services:
       ConnectionStrings__Redis: redis:6379
     ports:
       - "8082:8080"
+
+  battle-service:
+    build:
+      context: ../services/battle-service
+      dockerfile: Dockerfile
+    container_name: onlinegame-battle-service
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      HTTP_ADDR: :8080
+      REDIS_ADDR: redis:6379
+      INVENTORY_GRPC_ADDR: inventory-service:8080
+      MATCH_CHANNEL: battle:match-found
+    ports:
+      - "8083:8080"
